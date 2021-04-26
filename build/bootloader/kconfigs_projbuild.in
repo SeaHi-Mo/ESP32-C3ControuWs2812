@@ -1,0 +1,4 @@
+source "/home/saehi/Desktop/ESP/esp32-C3/esp-idf/components/bootloader/Kconfig.projbuild"
+source "/home/saehi/Desktop/ESP/esp32-C3/esp-idf/components/esp_rom/Kconfig.projbuild"
+source "/home/saehi/Desktop/ESP/esp32-C3/esp-idf/components/esptool_py/Kconfig.projbuild"
+source "/home/saehi/Desktop/ESP/esp32-C3/esp-idf/components/partition_table/Kconfig.projbuild"

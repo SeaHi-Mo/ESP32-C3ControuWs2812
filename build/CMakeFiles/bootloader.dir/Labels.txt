@@ -1,0 +1,13 @@
+# Target labels
+ bootloader
+# Source files and their labels
+/home/saehi/Desktop/ESP/esp32-C3/WS2812_Device/ESP32-C3ControuWs2812/build/CMakeFiles/bootloader
+/home/saehi/Desktop/ESP/esp32-C3/WS2812_Device/ESP32-C3ControuWs2812/build/CMakeFiles/bootloader.rule
+/home/saehi/Desktop/ESP/esp32-C3/WS2812_Device/ESP32-C3ControuWs2812/build/CMakeFiles/bootloader-complete.rule
+/home/saehi/Desktop/ESP/esp32-C3/WS2812_Device/ESP32-C3ControuWs2812/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule
+/home/saehi/Desktop/ESP/esp32-C3/WS2812_Device/ESP32-C3ControuWs2812/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule
+/home/saehi/Desktop/ESP/esp32-C3/WS2812_Device/ESP32-C3ControuWs2812/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule
+/home/saehi/Desktop/ESP/esp32-C3/WS2812_Device/ESP32-C3ControuWs2812/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule
+/home/saehi/Desktop/ESP/esp32-C3/WS2812_Device/ESP32-C3ControuWs2812/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule
+/home/saehi/Desktop/ESP/esp32-C3/WS2812_Device/ESP32-C3ControuWs2812/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule
+/home/saehi/Desktop/ESP/esp32-C3/WS2812_Device/ESP32-C3ControuWs2812/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule
