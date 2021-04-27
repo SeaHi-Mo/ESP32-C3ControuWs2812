@@ -1,14 +1,23 @@
-﻿# 前言
+# 前言
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ESP32-C3模组是4月初发布上线的一款双模(==2.4GWiFi+BLE5.0==)的通信模块，博主手上的是一款外置2M Flash的型号ESP32-C3F：
+
   ![在这里插入图片描述](https://img-blog.csdnimg.cn/20210426091709572.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxMTE0MDkyMDc0NQ==,size_16,color_FFFFFF,t_70#pic_center)
+  
  **本文是在Linux 开发环境用的是乐鑫的ESP-IDF的<font color=#1e15d9>master<font color=#4D4D4D>分 支的SDK基础上做的二次开发。** 所以需要准备的软件：
+ 
  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Linux 开发环境(当然Windos也是可以的，请参考： [ESP-IDF编程指南](https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/get-started/index.html#get-started-get-prerequisites).)
+ 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ESP-IDF: [master](https://github.com/espressif/esp-idf).(ESP-IDF的使用请参考 [ESP-IDF编程指南](https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/get-started/index.html#linux-macos).)
+
 **注意：** 在进行配置<font color=#e90827>menuconifg<font color=#> 的时候需要把 **Revision** 设置为<font color=#e90827>Rev2<font color=#>![在这里插入图片描述](https://img-blog.csdnimg.cn/20210426104540547.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxMTE0MDkyMDc0NQ==,size_16,color_FFFFFF,t_70)
 **硬件准备：**
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1、ESP32-C3F小开发板
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2、VB01离线语音模块
+
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3、WS2812 RGB灯条
+
 #  一、<font color=#19b2f2>新建工程文件
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 把ESP-IDF中的一个空例程复制到自己工程目录中，空例程在ESP-IDF中的路径如下：
 ```c
