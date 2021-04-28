@@ -1,0 +1,18 @@
+{
+    "files.associations": {
+        "*.cjson": "jsonc",
+        "*.wxss": "css",
+        "*.wxs": "javascript",
+        "led_strip.h": "c",
+        "esp_log.h": "c",
+        "esp_system.h": "c",
+        "mqtt_client.h": "c",
+        "stdlib.h": "c",
+        "uart.h": "c",
+        "rmt.h": "c",
+        "esp_netif.h": "c",
+        "task.h": "c",
+        "event_groups.h": "c"
+    },
+    "C_Cpp.errorSquiggles": "Disabled"
+}
