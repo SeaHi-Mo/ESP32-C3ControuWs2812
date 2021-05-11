@@ -37,7 +37,7 @@ static const int RX_BUF_SIZE = 1024;
 static led_strip_t *strip;
 
 #define RMT_TX_NUM 3
-#define RMT_TX_CHANNEL RMT_CHANNEL_0
+#define RMT_TX_CHANNEL RMT_CHANNEL_0 
 #define LED_STRIP_NUM 24
 
 #define LED_OPEN 6
@@ -61,7 +61,7 @@ struct WS2812_COLOR WS2812_RGB;
 
 #define MQTT_LINK_Aliyum 1 // 1:connect aliyum  0:not connect aliyum
 
-#define MQTT_LINK_HOST "iot-040a04ju.mqtt.iothub.aliyuncs.com"
+#define MQTT_LINK_HOST "a1CeZLiC2fi.iot-as-mqtt.cn-shanghai.aliyuncs.com"
 #define MQTT_LINK_PORT 1883
 
 //是否开启发布 1 为开启发布 0：关闭发布
@@ -69,11 +69,11 @@ struct WS2812_COLOR WS2812_RGB;
 
 #if MQTT_LINK_Aliyum
 /***** 阿里云设备三元组 ************/
-#define MQTT_DeviceName "led-strip"
-#define MQTT_ProductKey "g6oroz0VLBN"
+#define MQTT_DeviceName "led_strip"
+#define MQTT_ProductKey "a1CeZLiC2fi"
 char MQTT_LINK_USERNAME[128];
 /******* 数据发布的主题**************/
-#define MQTT_PUB_TOPIC "/sys/g6oroz0VLBN/led-strip/thing/service/property/set"
+#define MQTT_PUB_TOPIC "/sys/a1CeZLiC2fi/led-strip/thing/service/property/set"
 
 #elif
 
@@ -81,8 +81,8 @@ char MQTT_LINK_USERNAME[128];
 
 #endif
 
-#define MQTT_LINK_PASS "4549ff08345302779022e379610493de"				 //加过hmacmd5加密后的密码
-#define MQTT_LINK_CLIENT_ID "led-strip|securemode=3,signmethod=hmacmd5|" //客户端ID 阿里云
+#define MQTT_LINK_PASS "44c378c18635f42569af46a8924cf370"  //加过hmacmd5加密后的密码
+#define MQTT_LINK_CLIENT_ID "led_strip|securemode=3,signmethod=hmacmd5|" //客户端ID 阿里云
 
 static esp_mqtt_client_handle_t client;
 bool isConnect2Server = false;
