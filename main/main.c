@@ -104,19 +104,25 @@ User_data user_data;
 
 /***************************************************************/
 void uartControlLedStrip(int cmd_id);
-void set_rgb(uint16_t Red, uint16_t Green, uint16_t Blue);
+void set_rgb(uint32_t rgb_24bit);
 void WS2812_RGB_cJSONData(struct WS2812_COLOR *ws2812_rgb);
 /*************************************************************/
 
-void set_rgb(uint16_t Red, uint16_t Green, uint16_t Blue)
-{
+//void set_rgb(uint16_t Red, uint16_t Green, uint16_t Blue)
+void set_rgb(uint32_t rgb_24bit)
+{	
+	WS2812_RGB.blue=rgb_24bit & 0Xff;
+	rgb_24bit=rgb_24bit>>8;
+	WS2812_RGB.green=rgb_24bit & 0xff;
+	rgb_24bit=rgb_24bit>>8;
+	WS2812_RGB.red=rgb_24bit&0xff;
 	for (int i = 0; i < LED_STRIP_NUM; i++)
 	{
-		strip->set_pixel(strip, i, Red, Green, Blue);
+		strip->set_pixel(strip, i, WS2812_RGB.red, WS2812_RGB.green,WS2812_RGB.blue);
 	}
-	WS2812_RGB.red = Red;
+	/*WS2812_RGB.red = Red;
 	WS2812_RGB.green = Green;
-	WS2812_RGB.blue = Blue;
+	WS2812_RGB.blue = Blue;*/
 	strip->refresh(strip, 10);
 }
 //Ws2812 init function
@@ -138,7 +144,7 @@ void init_led()
 	}
 	// Clear LED strip (turn off all LEDs)
 	ESP_ERROR_CHECK(strip->clear(strip, 100));
-	set_rgb(0, 254, 0);
+	set_rgb(0xff00);
 }
 /* 
  * @Description: UART配置
@@ -202,17 +208,17 @@ void uartControlLedStrip(int cmd_id)
 	switch (cmd_id)
 	{
 	case LED_OPEN:
-		set_rgb(254, 254, 254);
+		set_rgb(0xFFFFF);
 		break;
 	case LED_CLOSE:
-		set_rgb(0, 0, 0);
+		set_rgb(0X000000);
 		break;
 	case COLOR_RED:
 		if ((WS2812_RGB.red == 0) && (WS2812_RGB.green == 0) && (WS2812_RGB.blue == 0))
 		{
 			break;
 		}
-		set_rgb(254, 0, 0);
+		set_rgb(0Xff0000);
 		break;
 
 	case COLOR_GREE:
@@ -220,7 +226,7 @@ void uartControlLedStrip(int cmd_id)
 		{
 			break;
 		}
-		set_rgb(0, 254, 0);
+		set_rgb(0x00FF00);
 		break;
 
 	case COLOR_BULE:
@@ -228,7 +234,7 @@ void uartControlLedStrip(int cmd_id)
 		{
 			break;
 		}
-		set_rgb(0, 0, 254);
+		set_rgb(0X0000ff);
 		break;
 
 	case COLOR_ORANGE:
@@ -237,7 +243,7 @@ void uartControlLedStrip(int cmd_id)
 
 			break;
 		}
-		set_rgb(240, 83, 11);
+		set_rgb(0XF05308);
 		break;
 
 	case COLOR_PURPLE:
@@ -246,7 +252,7 @@ void uartControlLedStrip(int cmd_id)
 
 			break;
 		}
-		set_rgb(140, 13, 238);
+		set_rgb(0X8C0BEE);
 		break;
 	}
 }
@@ -499,11 +505,11 @@ void Task_ParseJSON(void *pvParameters)
 		if (pJsonGRB == NULL)
 			goto __cJSON_Delete;
 
-		cJSON *pJSON_Item_Red = cJSON_GetObjectItem(pJsonGRB, "R");
+		/*cJSON *pJSON_Item_Red = cJSON_GetObjectItem(pJsonGRB, "R");
 		cJSON *pJSON_Item_Gree = cJSON_GetObjectItem(pJsonGRB, "G");
-		cJSON *pJSON_Item_Blue = cJSON_GetObjectItem(pJsonGRB, "B");
+		cJSON *pJSON_Item_Blue = cJSON_GetObjectItem(pJsonGRB, "B");*/
 
-		set_rgb(pJSON_Item_Red->valueint, pJSON_Item_Gree->valueint, pJSON_Item_Blue->valueint);
+		set_rgb(pJsonGRB->valueint);
 
 		//播放提示音
 		beepPlayTheTone(&WS2812_RGB);
@@ -524,7 +530,7 @@ void app_main(void)
 
 	init_led();
 	UART_Init();
-	set_rgb(0, 0, 0);
+	set_rgb(0x0);
 	//开启串口接收任务
 	xTaskCreate(uartRxTask, "uart_rx_task", 1024 * 3, NULL, 4, NULL);
 	//组建MQTT订阅的主题
