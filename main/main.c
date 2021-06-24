@@ -37,8 +37,8 @@ static const int RX_BUF_SIZE = 1024;
 static led_strip_t *strip;
 
 #define RMT_TX_NUM 3
-#define RMT_TX_CHANNEL RMT_CHANNEL_0 
-#define LED_STRIP_NUM 24
+#define RMT_TX_CHANNEL RMT_CHANNEL_0
+#define LED_STRIP_NUM 16
 
 #define LED_OPEN 6
 #define LED_CLOSE 7
@@ -49,8 +49,18 @@ static led_strip_t *strip;
 #define COLOR_PURPLE 11
 #define COLOR_ORANGE 12
 
+#define Lamp_Open 13
+#define lamp_close 14
+#define lamp_speed_Up 15
+#define lamp_speed_down 16
+
+#define ligth_down 18
+#define ligth_up 19
 struct WS2812_COLOR
 {
+	uint8_t lamp;
+	uint8_t ligth_rank;
+	uint8_t lamp_speed;
 	uint32_t red;
 	uint32_t green;
 	uint32_t blue;
@@ -81,7 +91,7 @@ char MQTT_LINK_USERNAME[128];
 
 #endif
 
-#define MQTT_LINK_PASS "44c378c18635f42569af46a8924cf370"  //加过hmacmd5加密后的密码
+#define MQTT_LINK_PASS "44c378c18635f42569af46a8924cf370"				 //加过hmacmd5加密后的密码
 #define MQTT_LINK_CLIENT_ID "led_strip|securemode=3,signmethod=hmacmd5|" //客户端ID 阿里云
 
 static esp_mqtt_client_handle_t client;
@@ -89,8 +99,8 @@ bool isConnect2Server = false;
 
 char MqttTopicSub[128], MqttTopicPub[128];
 
-static xQueueHandle ParseJSONQueueHandler = NULL;				//解析json数据的队列
-static xTaskHandle mHandlerParseJSON = NULL, handleMqtt = NULL; //任务队列
+static xQueueHandle ParseJSONQueueHandler = NULL;									  //解析json数据的队列
+static xTaskHandle mHandlerParseJSON = NULL, handleMqtt = NULL, lampLEDHandle = NULL; //任务队列
 //发布需要发布的数据
 char cJson_data[1024];
 
@@ -104,26 +114,85 @@ User_data user_data;
 
 /***************************************************************/
 void uartControlLedStrip(int cmd_id);
-void set_rgb(uint32_t rgb_24bit);
+void RGB16for10(struct WS2812_COLOR *RGB, uint32_t reb_16);
+void set_rgb(uint32_t rgb_24bit, uint8_t ligth_rank);
 void WS2812_RGB_cJSONData(struct WS2812_COLOR *ws2812_rgb);
+void stripLamp(uint32_t rgb_16data, uint8_t ligth_rank);
 /*************************************************************/
+//16进制RGB转换为十进制的 R ,G B
 
+void RGB16for10(struct WS2812_COLOR *RGB, uint32_t reb_16)
+{
+	uint32_t rgb_16 = reb_16;
+	RGB->blue = rgb_16 & 0Xff;
+
+	rgb_16 = rgb_16 >> 8;
+	RGB->green = rgb_16 & 0xff;
+
+	rgb_16 = rgb_16 >> 8;
+
+	RGB->red = rgb_16 & 0xff;
+}
 //void set_rgb(uint16_t Red, uint16_t Green, uint16_t Blue)
-void set_rgb(uint32_t rgb_24bit)
-{	
-	WS2812_RGB.blue=rgb_24bit & 0Xff;
-	rgb_24bit=rgb_24bit>>8;
-	WS2812_RGB.green=rgb_24bit & 0xff;
-	rgb_24bit=rgb_24bit>>8;
-	WS2812_RGB.red=rgb_24bit&0xff;
+void set_rgb(uint32_t rgb_24bit, uint8_t ligth_rank)
+{
+	RGB16for10(&WS2812_RGB, rgb_24bit);
+	ligth_rank = 21 - ligth_rank;
 	for (int i = 0; i < LED_STRIP_NUM; i++)
 	{
-		strip->set_pixel(strip, i, WS2812_RGB.red, WS2812_RGB.green,WS2812_RGB.blue);
+		strip->set_pixel(strip, i, WS2812_RGB.red / ligth_rank, WS2812_RGB.green / ligth_rank, WS2812_RGB.blue / ligth_rank);
 	}
-	/*WS2812_RGB.red = Red;
-	WS2812_RGB.green = Green;
-	WS2812_RGB.blue = Blue;*/
+
 	strip->refresh(strip, 10);
+}
+//跑马灯函数
+/* 参数：rgb_16data 为十六位颜色值
+* 参数：ligth_rank 为亮度等级 0~20,值越大，亮度越高
+*/
+void stripLamp(uint32_t rgb_16data, uint8_t ligth_rank)
+{
+	struct WS2812_COLOR lampRGB;
+	int i = 0;
+
+	RGB16for10(&lampRGB, rgb_16data);
+	
+	while (i < LED_STRIP_NUM)
+	{
+		RGB16for10(&lampRGB, rand() % 16777214);
+		if (WS2812_RGB.lamp)
+		{
+			strip->set_pixel(strip, i, lampRGB.red / (21 - ligth_rank), lampRGB.green / (21 - ligth_rank), lampRGB.blue / (21 - ligth_rank));
+			if (i > 0)
+				strip->set_pixel(strip, i - 1, 0, 0, 0);
+			strip->refresh(strip, 10);
+			vTaskDelay(10 * (101 - WS2812_RGB.lamp_speed) / portTICK_RATE_MS);
+			i++;
+		}
+		else
+			vTaskDelay(10 / portTICK_RATE_MS);
+	}
+	strip->set_pixel(strip, LED_STRIP_NUM-1, 0, 0, 0);
+	strip->refresh(strip, 10);
+}
+
+//跑马灯任务
+static void stripLampTask(void *pvParameters)
+{
+	char *LAMP_ATG = "Lamp_Task";
+	uint32_t RGB_Color = rand() % 16711935;
+
+	ESP_LOGI(LAMP_ATG, "Lamp start");
+	WS2812_RGB.ligth_rank=10;
+	while (1)
+	{
+		if (WS2812_RGB.lamp)
+		{	
+
+			stripLamp(RGB_Color, WS2812_RGB.ligth_rank);
+			RGB_Color = rand() % 16711935;
+		}
+		vTaskDelay(10 / portTICK_RATE_MS);
+	}
 }
 //Ws2812 init function
 void init_led()
@@ -144,7 +213,7 @@ void init_led()
 	}
 	// Clear LED strip (turn off all LEDs)
 	ESP_ERROR_CHECK(strip->clear(strip, 100));
-	set_rgb(0xff00);
+	set_rgb(0xff00, 0);
 }
 /* 
  * @Description: UART配置
@@ -187,7 +256,7 @@ int uartDataHandle(uint8_t *data)
 			++temp;
 			ID_NUM = atoi((const char *)temp);
 			ESP_LOGI(TAG, "Cmd ID:%d", ID_NUM);
-			return ID_NUM;
+			goto __RETURN_ID;
 		}
 		else
 			goto __RETURN_ID;
@@ -199,62 +268,115 @@ __RETURN_ID:
 	return ID_NUM;
 }
 /*
+*
+*颜色提示音
+*
+*/
+unsigned char beep[][4] = {
+	{0xAA, 0x02, 0x03, 0xBB}, //开灯
+	{0xAA, 0x02, 0x04, 0xBB}, //关灯
+	{0xAA, 0x02, 0x05, 0xBB}, //调成绿色
+	{0xAA, 0x02, 0x06, 0xBB}, //调成红色
+	{0xAA, 0x02, 0x07, 0xBB}, //调成蓝色
+	{0xAA, 0x02, 0x08, 0xBB}, //调成紫色
+	{0xAA, 0x02, 0x09, 0xBB}, //调成橙色
+
+	{0xAA, 0x02, 0x0A, 0xBB}, //开始跑
+	{0xAA, 0x02, 0x0B, 0xBB}, //停止跑
+	{0xAA, 0x02, 0x0C, 0xBB}, //提速
+	{0xAA, 0x02, 0x0D, 0xBB}, //降速
+	{0xAA, 0x02, 0x0E, 0xBB}, //还在跑
+};
+/*
  *
  * uart controu LED strip 
  *
  */
 void uartControlLedStrip(int cmd_id)
 {
+	/*if (WS2812_RGB.red == 0 && WS2812_RGB.green == 0 && WS2812_RGB.blue == 0)
+		return;*/
+	//if(WS2812_RGB.lamp==1) return ;
+
 	switch (cmd_id)
 	{
 	case LED_OPEN:
-		set_rgb(0xFFFFF);
+		if (WS2812_RGB.lamp)
+			{uart_write_bytes(UART_NUM_1, beep[11], sizeof(beep[0]));break;}
+		set_rgb(0xFFFFFF, WS2812_RGB.ligth_rank);
 		break;
 	case LED_CLOSE:
-		set_rgb(0X000000);
+		if (WS2812_RGB.lamp)
+			{uart_write_bytes(UART_NUM_1, beep[11], sizeof(beep[0]));break;}
+			
+		set_rgb(0X000000, WS2812_RGB.ligth_rank);
 		break;
 	case COLOR_RED:
-		if ((WS2812_RGB.red == 0) && (WS2812_RGB.green == 0) && (WS2812_RGB.blue == 0))
-		{
-			break;
-		}
-		set_rgb(0Xff0000);
+		if (WS2812_RGB.lamp)
+			{uart_write_bytes(UART_NUM_1, beep[11], sizeof(beep[0]));break;}
+		set_rgb(0Xff0000, WS2812_RGB.ligth_rank);
 		break;
-
 	case COLOR_GREE:
-		if (WS2812_RGB.red == 0 && WS2812_RGB.green == 0 && WS2812_RGB.blue == 0)
-		{
-			break;
-		}
-		set_rgb(0x00FF00);
+		if (WS2812_RGB.lamp)
+			{uart_write_bytes(UART_NUM_1, beep[11], sizeof(beep[0]));break;}
+		set_rgb(0x00FF00, WS2812_RGB.ligth_rank);
 		break;
-
 	case COLOR_BULE:
-		if (WS2812_RGB.red == 0 && WS2812_RGB.green == 0 && WS2812_RGB.blue == 0)
-		{
-			break;
-		}
-		set_rgb(0X0000ff);
+		if (WS2812_RGB.lamp)
+			{uart_write_bytes(UART_NUM_1, beep[11], sizeof(beep[0]));break;}
+			
+		set_rgb(0X0000ff, WS2812_RGB.ligth_rank);
 		break;
-
 	case COLOR_ORANGE:
-		if (WS2812_RGB.red == 0 && WS2812_RGB.green == 0 && WS2812_RGB.blue == 0)
-		{
-
-			break;
-		}
-		set_rgb(0XF05308);
+		if (WS2812_RGB.lamp)
+			{uart_write_bytes(UART_NUM_1, beep[11], sizeof(beep[0]));break;}
+			
+		set_rgb(0XF05308, WS2812_RGB.ligth_rank);
 		break;
-
 	case COLOR_PURPLE:
-		if (WS2812_RGB.red == 0 && WS2812_RGB.green == 0 && WS2812_RGB.blue == 0)
-		{
-
+		if (WS2812_RGB.lamp){uart_write_bytes(UART_NUM_1, beep[11], sizeof(beep[0]));break;}
+			
+		set_rgb(0X8C0BEE, WS2812_RGB.ligth_rank);
+		break;
+	case Lamp_Open:
+		WS2812_RGB.lamp = 1;
+		WS2812_RGB.lamp_speed = 80;
+		set_rgb(0,0);	
+		break;
+	case lamp_close:
+		WS2812_RGB.lamp = 0;
+		break;
+	case lamp_speed_Up:
+		if (!WS2812_RGB.lamp)break;
+		if(WS2812_RGB.lamp_speed>0&&WS2812_RGB.lamp_speed<100)
+			WS2812_RGB.lamp_speed >= 90 ? (WS2812_RGB.lamp_speed += 5) : (WS2812_RGB.lamp_speed += 10);
+		else WS2812_RGB.lamp_speed=100;
+		break;
+	case lamp_speed_down:
+		if (!WS2812_RGB.lamp)
 			break;
+		if(WS2812_RGB.lamp_speed>0&&WS2812_RGB.lamp_speed<101)
+			WS2812_RGB.lamp_speed >= 90 ? (WS2812_RGB.lamp_speed -= 5) : (WS2812_RGB.lamp_speed -= 10);
+		else WS2812_RGB.lamp_speed=10;
+		break;
+	case ligth_up:
+		if(WS2812_RGB.ligth_rank>0 && WS2812_RGB.ligth_rank<20)
+			WS2812_RGB.ligth_rank+=5;
+		else {
+			if(WS2812_RGB.ligth_rank==20)
+			WS2812_RGB.ligth_rank=20;
 		}
-		set_rgb(0X8C0BEE);
+			
+		printf("Ligth =%d\n",WS2812_RGB.ligth_rank);
+		break;
+	case ligth_down:
+		if(WS2812_RGB.ligth_rank>0 && WS2812_RGB.ligth_rank<21)
+			WS2812_RGB.ligth_rank-=5;
+		
+		printf("Ligth =%d\n",WS2812_RGB.ligth_rank);
 		break;
 	}
+
 }
 /*
  *UART RX Task
@@ -270,12 +392,13 @@ static void uartRxTask(void *arg)
 
 	while (1)
 	{
-		const int rxBytes = uart_read_bytes(UART_NUM_1, data, RX_BUF_SIZE, 1000 / portTICK_RATE_MS);
+		const int rxBytes = uart_read_bytes(UART_NUM_1, data, RX_BUF_SIZE, 10 / portTICK_RATE_MS);
 		if (rxBytes > 0)
 		{
 			data[rxBytes] = 0;
-			ESP_LOGI(RX_TASK_TAG, "Read %d bytes: '%s'", rxBytes, data);
-			memset(cJson_data, 0, sizeof(cJson_data));
+			ESP_LOGI(RX_TASK_TAG, "Read %d bytes: %s", rxBytes, data);
+			memset(cJson_data, 0, sizeof(cJson_data)); //????
+
 			uartControlLedStrip(uartDataHandle(data));
 #if MQTT_Pub_Status
 			WS2812_RGB_cJSONData(&WS2812_RGB);
@@ -283,6 +406,7 @@ static void uartRxTask(void *arg)
 #endif
 			ESP_LOG_BUFFER_HEXDUMP(RX_TASK_TAG, data, rxBytes, ESP_LOG_INFO);
 		}
+		vTaskDelay(10 / portTICK_RATE_MS);
 	}
 	free(data);
 }
@@ -404,66 +528,42 @@ void TaskXMqttRecieve(void *p)
 
 	vTaskDelete(NULL);
 }
-/*
-*
-*颜色提示音
-*
-*/
-unsigned char beep[][4] = {
-	{0xAA, 0x02, 0x03, 0xBB}, //开灯
-	{0xAA, 0x02, 0x04, 0xBB}, //关灯
-	{0xAA, 0x02, 0x05, 0xBB}, //调成绿色
-	{0xAA, 0x02, 0x06, 0xBB}, //调成红色
-	{0xAA, 0x02, 0x07, 0xBB}, //调成蓝色
-	{0xAA, 0x02, 0x08, 0xBB}, //调成紫色
-	{0xAA, 0x02, 0x09, 0xBB}, //调成橙色
-};
 
 int beepPlayTheTone(struct WS2812_COLOR *RGB)
 {
-
-	if (RGB->green == 254 && (RGB->blue + RGB->red) == 0)
+	uint32_t RGB_24Bit = 0;
+	RGB_24Bit = RGB->red << 8 | RGB->green;
+	RGB_24Bit = RGB_24Bit << 8;
+	RGB_24Bit = RGB_24Bit | RGB->blue;
+	if (WS2812_RGB.lamp == 1)
+		return ESP_OK;
+	switch (RGB_24Bit)
 	{
+	case 0XFF00:
 		uart_write_bytes(UART_NUM_1, beep[2], sizeof(beep[0]));
-		return ESP_OK;
-	}
-
-	if (RGB->red == 254 && (RGB->blue + RGB->green) == 0)
-	{
+		break;
+	case 0xFF0000:
 		uart_write_bytes(UART_NUM_1, beep[3], sizeof(beep[0]));
-		return ESP_OK;
-	}
-
-	if (RGB->blue == 254 && (RGB->green + RGB->red) == 0)
-	{
+		break;
+	case 0xFF:
 		uart_write_bytes(UART_NUM_1, beep[4], sizeof(beep[0]));
-		return ESP_OK;
-	}
-
-	if (RGB->blue == 238 && ((RGB->blue + RGB->green + RGB->red) == 391) &&RGB->red == 140)
-	{
-		uart_write_bytes(UART_NUM_1, beep[5], sizeof(beep[0]));
-		return ESP_OK;
-	}
-
-	if (RGB->red == 240 && (RGB->blue + RGB->green == 94) && RGB->blue == 11)
-	{
+		break;
+	case 0XF05308:
 		uart_write_bytes(UART_NUM_1, beep[6], sizeof(beep[0]));
-		return ESP_OK;
-	}
-
-	if ((RGB->red + RGB->green + RGB->blue) == 762)
-	{
+		break;
+	case 0X8C0BEE:
+		uart_write_bytes(UART_NUM_1, beep[5], sizeof(beep[0]));
+		break;
+	case 0xFFFFFF:
 		uart_write_bytes(UART_NUM_1, beep[0], 4); //播放：已经打开灯了
-		return ESP_OK;
-	}
-
-	if ((RGB->red + RGB->green + RGB->blue) == 0)
-	{
+		break;
+	case 0x0:
 		uart_write_bytes(UART_NUM_1, beep[1], 4); //播放：已经关灯了
-		return ESP_OK;
+		break;
+	default:
+		break;
 	}
-	return ESP_FAIL;
+	return ESP_OK;
 }
 
 /* 
@@ -474,7 +574,6 @@ int beepPlayTheTone(struct WS2812_COLOR *RGB)
 void Task_ParseJSON(void *pvParameters)
 {
 	printf("[SY] Task_ParseJSON_Message creat ... \n");
-
 	while (1)
 	{
 		struct __User_data *pMqttMsg;
@@ -502,15 +601,21 @@ void Task_ParseJSON(void *pvParameters)
 		}
 
 		cJSON *pJsonGRB = cJSON_GetObjectItem(pJsonParams, "RGB");
-		if (pJsonGRB == NULL)
-			goto __cJSON_Delete;
+		cJSON *pJsonLamp = cJSON_GetObjectItem(pJsonParams, "lamp");
+		cJSON *pJsonLigth = cJSON_GetObjectItem(pJsonParams, "ligth");
+		cJSON *pJsonSpeed = cJSON_GetObjectItem(pJsonParams, "speed");
 
-		/*cJSON *pJSON_Item_Red = cJSON_GetObjectItem(pJsonGRB, "R");
-		cJSON *pJSON_Item_Gree = cJSON_GetObjectItem(pJsonGRB, "G");
-		cJSON *pJSON_Item_Blue = cJSON_GetObjectItem(pJsonGRB, "B");*/
+		WS2812_RGB.ligth_rank = pJsonLigth->valueint;
+		WS2812_RGB.lamp = pJsonLamp->valueint;
+		WS2812_RGB.lamp_speed = pJsonSpeed->valueint;
 
-		set_rgb(pJsonGRB->valueint);
-
+		if (pJsonLamp->valueint == 0 && pJsonGRB != NULL)
+		{
+			set_rgb(pJsonGRB->valueint, pJsonLigth->valueint);
+			WS2812_RGB.lamp = 0;
+		}
+		else
+			set_rgb(0, 0);
 		//播放提示音
 		beepPlayTheTone(&WS2812_RGB);
 	__cJSON_Delete:
@@ -530,7 +635,7 @@ void app_main(void)
 
 	init_led();
 	UART_Init();
-	set_rgb(0x0);
+	set_rgb(0x0, 0);
 	//开启串口接收任务
 	xTaskCreate(uartRxTask, "uart_rx_task", 1024 * 3, NULL, 4, NULL);
 	//组建MQTT订阅的主题
@@ -561,4 +666,6 @@ void app_main(void)
 	{
 		xTaskCreate(Task_ParseJSON, "Task_ParseJSONData", 1024 * 3, NULL, 6, &mHandlerParseJSON);
 	}
+	//创建跑马灯任务
+	xTaskCreate(stripLampTask, "Lamp_LED_Task", 1024 * 2, NULL, 7, &lampLEDHandle);
 }
