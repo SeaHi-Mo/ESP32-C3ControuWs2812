@@ -38,7 +38,7 @@ static led_strip_t *strip;
 
 #define RMT_TX_NUM 3
 #define RMT_TX_CHANNEL RMT_CHANNEL_0
-#define LED_STRIP_NUM 16
+#define LED_STRIP_NUM 24
 
 #define LED_OPEN 6
 #define LED_CLOSE 7
@@ -309,7 +309,8 @@ void uartControlLedStrip(int cmd_id)
 		if (WS2812_RGB.lamp)
 			{uart_write_bytes(UART_NUM_1, beep[11], sizeof(beep[0]));break;}
 			
-		set_rgb(0X000000, WS2812_RGB.ligth_rank);
+		//set_rgb(0X000000, WS2812_RGB.ligth_rank);
+		strip->clear(strip,1000);	
 		break;
 	case COLOR_RED:
 		if (WS2812_RGB.lamp)
@@ -360,18 +361,34 @@ void uartControlLedStrip(int cmd_id)
 		else WS2812_RGB.lamp_speed=10;
 		break;
 	case ligth_up:
-		if(WS2812_RGB.ligth_rank>0 && WS2812_RGB.ligth_rank<20)
+		if(WS2812_RGB.ligth_rank<20)
 			WS2812_RGB.ligth_rank+=5;
 		else {
 			if(WS2812_RGB.ligth_rank==20)
 			WS2812_RGB.ligth_rank=20;
 		}
-			
+
+		for (int i = 0; i < LED_STRIP_NUM; i++)
+			strip->set_pixel(strip, i, 
+									WS2812_RGB.red / (21-WS2812_RGB.ligth_rank), 
+									WS2812_RGB.green / (21-WS2812_RGB.ligth_rank), 
+									WS2812_RGB.blue / (21-WS2812_RGB.ligth_rank));
+
+
+		strip->refresh(strip, 10);	
 		printf("Ligth =%d\n",WS2812_RGB.ligth_rank);
 		break;
 	case ligth_down:
 		if(WS2812_RGB.ligth_rank>0 && WS2812_RGB.ligth_rank<21)
 			WS2812_RGB.ligth_rank-=5;
+ 
+		for (int i = 0; i < LED_STRIP_NUM; i++)
+			strip->set_pixel(strip, i, 
+							WS2812_RGB.red / (21-WS2812_RGB.ligth_rank),
+							WS2812_RGB.green / (21-WS2812_RGB.ligth_rank), 
+							WS2812_RGB.blue / (21-WS2812_RGB.ligth_rank));
+
+		strip->refresh(strip, 10);	
 		
 		printf("Ligth =%d\n",WS2812_RGB.ligth_rank);
 		break;
